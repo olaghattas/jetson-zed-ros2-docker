@@ -2,7 +2,7 @@ version: '3'
 services:
     zed-ros2:
         privileged: true
-        image: "humble_zed_bdy__track:latest"
+        image: "olagh/humble_zed_humble:latest"
         ipc: host
         pid: host
         network_mode: host
@@ -11,14 +11,15 @@ services:
             - ROS_DOMAIN_ID=22
             - DISPLAY=$DISPLAY
             - FASTRTPS_DEFAULT_PROFILES_FILE=/profile/fastrtps_default_profiles.xml
+            - cam_loc = "kitchen"
         volumes:
             - /tmp/.X11-unix/:/tmp/.X11-unix
             - ./profile:/profile
             - ./zed_launch.bash:/tmp/zed_launch.bash 
             - /dev:/dev
             - /usr/local/zed/resources:/usr/local/zed/resources
-        tty: true
-        #command: /tmp/zed_launch.bash
+        #tty: true
+        command: /tmp/zed_launch.bash
         deploy: 
          resources:
           reservations:
