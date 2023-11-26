@@ -79,8 +79,9 @@ RUN apt update -y && \
   apt upgrade -y && \
   apt-get install libffi-dev && \
   apt-get install libssl-dev && \
-  apt-get install libudev-dev && \
-  pip3 install opencv-contrib-python
+  apt-get install libudev-dev libopencv-dev libopencv-contrib-dev && \
+  pip3 install opencv-contrib-python && \
+  apt-get install libopencv-dev libopencv-contrib-dev 
 
 # Install missing dependencies
 WORKDIR /root/ros2_ws/src
@@ -93,12 +94,10 @@ RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz 
   rm -rf geographic-info && \
   git clone https://github.com/ros-drivers/nmea_msgs.git --branch ros2 && \
   git clone https://github.com/ros/angles.git --branch humble-devel && \
-  git clone https://github.com/AprilRobotics/apriltag.git && \
+  git clone https://github.com/MarzanShuvo/apriltag.git && \
   git clone https://github.com/olaghattas/jetson_zed_setup.git && \
-  git clone https://github.com/olaghattas/apriltag_ros.git -b foxy-devel 
-  
-## particle filter
-# RUN git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams
+  git clone https://github.com/olaghattas/apriltag_ros.git -b foxy-devel && \
+  git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams
 
 
 # Check that all the dependencies are satisfied

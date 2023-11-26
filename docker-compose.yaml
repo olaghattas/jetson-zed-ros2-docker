@@ -12,6 +12,10 @@ services:
             - DISPLAY=$DISPLAY
             - FASTRTPS_DEFAULT_PROFILES_FILE=/profile/fastrtps_default_profiles.xml
             - cam_loc = "kitchen"
+            - tag_kitchen="15"
+            - tag_doorway="13"
+            - tag_livingroom="3"
+            - target_id="15"
         volumes:
             - /tmp/.X11-unix/:/tmp/.X11-unix
             - ./profile:/profile
