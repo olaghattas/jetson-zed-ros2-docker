@@ -22,8 +22,8 @@ services:
             - ./zed_launch.bash:/tmp/zed_launch.bash 
             - /dev:/dev
             - /usr/local/zed/resources:/usr/local/zed/resources
-        #tty: true
-        command: /tmp/zed_launch.bash
+        tty: true
+        #command: /tmp/zed_launch.bash
         deploy: 
          resources:
           reservations:
