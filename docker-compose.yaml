@@ -6,6 +6,8 @@ services:
         ipc: host
         pid: host
         network_mode: host
+        cap_add:
+            - SYS_PTRACE
         environment:
             - PULSE_SERVER=tcp:host.docker.internal:4713
             - ROS_DOMAIN_ID=22
