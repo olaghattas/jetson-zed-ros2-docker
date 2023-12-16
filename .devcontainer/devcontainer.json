@@ -1,0 +1,6 @@
+{
+  "name": "Dev Container",
+  "dockerComposeFile": "../docker-compose.yaml",
+  "service": "zed-ros2_cv",
+  "workspaceFolder": "/root",
+}
