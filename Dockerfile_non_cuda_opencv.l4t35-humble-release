@@ -13,19 +13,13 @@ ARG L4T_MINOR=6
 ARG ROS2_DIST=humble       # ROS2 distribution
     
 # ZED ROS2 Wrapper dependencies version
-#ARG XACRO_VERSION=2.0.8
-#ARG DIAGNOSTICS_VERSION=3.1.2
-#ARG AMENT_LINT_VERSION=0.12.4
-#ARG GEOGRAPHIC_INFO_VERSION=1.0.4
-#ARG ROBOT_LOCALIZATION_VERSION=3.4.2
-
 ARG XACRO_VERSION=2.0.9
 ARG DIAGNOSTICS_VERSION=3.1.2
 ARG AMENT_LINT_VERSION=0.16.1
 ARG GEOGRAPHIC_INFO_VERSION=1.0.5
 ARG ROBOT_LOCALIZATION_VERSION=3.6.0
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND noninteractive apt --fix-broken -y install
 
 # Disable apt-get warnings
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA || true && \
@@ -58,46 +52,45 @@ RUN apt install --yes build-essential cmake git pkg-config libgtk-3-dev \
     libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev \
     gfortran openexr libatlas-base-dev python3-dev python3-numpy \
     libtbb2 libtbb-dev libdc1394-22-dev
-   
-# Install OPENCV
-
-RUN apt-get update 
-RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev \ 	   
-    libavformat-dev libswscale-dev \
-    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-    python-dev python-numpy python3-numpy \
-    libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libdc1394-22-dev \
-    libv4l-dev v4l-utils qv4l2 v4l2ucp
     
-RUN mkdir ~/opencv_build && cd ~/opencv_build && \
-    git clone https://github.com/opencv/opencv.git && \
-    git clone https://github.com/opencv/opencv_contrib.git && \
-    cd ~/opencv_build/opencv && \
-    mkdir build && cd build && \
-    cmake -D CMAKE_BUILD_TYPE=RELEASE \
-    -D CMAKE_INSTALL_PREFIX=/usr/ \
-    -D PYTHON3_PACKAGES_PATH=/usr/lib/python3/dist-packages \
-    -D PYTHON_DEFAULT_EXECUTABLES=$(which python3) \
-    -D INSTALL_C_EXAMPLES=ON \
-    -D INSTALL_PYTHON_EXAMPLES=ON \
-    -D OPENCV_GENERATE_PKGCONFIG=ON \
-    -D OPENCV_EXTRA_MODULES_PATH=~/opencv_build/opencv_contrib/modules \
-    -D BUILD_EXAMPLES=ON .. && \
-    make -j8 && \
-    sudo make install
-RUN echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
-RUN echo 'export PYTHONPATH=/usr/local/lib/python3.6/site-packages/:$PYTHONPATH' >> ~/.bashrc
-RUN source ~/.bashrc
- 
-#RUN apt install --yes libopencv-calib3d-dev libopencv-contrib-dev && \
-#RUN apt install --yes libopencv-features2d-dev libopencv-highgui-dev libopencv-imgcodecs-dev && \
-#RUN apt install --yes libopencv-objdetect-dev  libopencv-shape-dev libopencv-stitching-dev  libopencv-superres-dev  libopencv-video-dev && \
-#RUN apt install --yes libopencv-videoio-dev  libopencv-videostab-dev  libopencv4.2-java libopencv-calib3d4.2 libopencv-contrib4.2 libopencv-features2d4.2 && \
-#RUN apt install --yes libopencv-highgui4.2 libopencv-imgcodecs4.2 libopencv-videoio4.2 libgdal26 libodbc1
-#RUN apt-get update -y
-#RUN apt-get install --yes aptitude
-#RUN aptitude install libopencv-dev -n
-#RUN aptitude install libopencv-contrib-dev -y
+   
+########### INSTALLING OPENCV ########
+RUN apt-get purge -y '*opencv*'
+### since rosdep insatlls old verion of opencv3.2 and i need 4.5 i need to install it from scratch and add path to LD_LIBRARY_PATH
+
+# OpenCV Version
+ARG OPENCV_VERSION="4.5.5"
+
+WORKDIR /opt
+# clone and configure OpenCV repo
+RUN git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/opencv.git && \
+    git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/opencv_contrib.git
+    
+RUN cd opencv && \
+    mkdir build && \
+    cd build && \
+  cmake -D CMAKE_BUILD_TYPE=RELEASE \
+ -D CMAKE_INSTALL_PREFIX=/usr/local \
+ -D INSTALL_PYTHON_EXAMPLES=ON \
+ -D INSTALL_C_EXAMPLES=ON \
+ -D OPENCV_ENABLE_NONFREE=ON \
+ -D OPENCV_GENERATE_PKGCONFIG=ON \
+ -D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib/modules \
+ -D PYTHON_EXECUTABLE=/usr/local/bin/python \
+ -D BUILD_EXAMPLES=ON ../
+    
+RUN cd opencv/build && make -j$(nproc)
+
+RUN pwd && ls -l
+RUN cd /opt/opencv && ls -l
+WORKDIR /opt/opencv/build
+RUN  pwd && ls -l
+RUN sudo make install
+RUN  pwd
+RUN make package
+
+########### FINISH INSTALLING OPENCV ########
+
 
 # Copy files from your host to your current working directory
 COPY ZED_SDK_Tegra_L4T32.7_v4.0.8.zstd.run .
@@ -122,8 +115,15 @@ ENV ROS_DISTRO ${ROS2_DIST}
 # Install the ZED ROS2 Wrapper
 WORKDIR /root/ros2_ws/src
 
-RUN git clone --recursive https://github.com/olaghattas/zed-ros2-wrapper.git -b jetson
 
+## place in /usr/include/opencv4
+RUN cp /usr/local/include/opencv4 /usr/include/opencv4
+## place in /usr/share/opencv4
+RUN cp /usr/local/include/opencv4 /usr/share/opencv4
+
+
+
+RUN git clone --recursive https://github.com/olaghattas/zed-ros2-wrapper.git -b jetson
 # Install missing dependencies
 WORKDIR /root/ros2_ws/src
 RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz -O - | tar -xvz && mv xacro-${XACRO_VERSION} xacro && \
@@ -135,17 +135,15 @@ RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz 
   rm -rf geographic-info && \
   git clone https://github.com/ros-drivers/nmea_msgs.git --branch ros2 && \
   git clone https://github.com/ros/angles.git --branch humble-devel && \
-  #git clone https://github.com/MarzanShuvo/apriltag.git && \
-  git clone https://github.com/olaghattas/jetson_zed_setup.git 
-  # && \
-  #git clone https://github.com/olaghattas/apriltag_ros.git -b foxy-devel && \
-  #git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams
+  git clone https://github.com/MarzanShuvo/apriltag.git && \
+  git clone https://github.com/olaghattas/jetson_zed_setup.git && \
+  git clone https://github.com/olaghattas/human_pose_detection.git && \
+  git clone https://github.com/olaghattas/apriltag_ros.git -b foxy-devel
+#git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams
 
-
-# Check that all the dependencies are satisfied
 WORKDIR /root/ros2_ws
 RUN apt-get update -y || true && rosdep fix-permissions && rosdep update && \
-  rosdep install --from-paths src --ignore-src -r -y && \
+  rosdep install --from-paths src --ignore-src --skip-keys "libopencv-dev libopencv-contrib-dev libopencv-imgproc-dev python-opencv python3-opencv"  -r -y && \
   rm -rf /var/lib/apt/lists/*
 
 # Install cython
@@ -157,6 +155,7 @@ RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/install/setup.bash && \
   --event-handlers console_direct+ --base-paths src \
   --cmake-args ' -DCMAKE_BUILD_TYPE=Release' \
   ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' \
+  ' -DCUDA_CUDART_LIBRARY=/usr/local/cuda/lib64/stubs' \
   ' -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined"' \
   ' --no-warn-unused-cli' "
 
@@ -164,7 +163,8 @@ WORKDIR /root/ros2_ws
 
 # Setup environment variables
 COPY ros_entrypoint_jetson.sh /sbin/ros_entrypoint.sh
-RUN sudo chmod 755 /sbin/ros_entrypoint.sh
+RUN sudo chmod 755 /sbin/ros_entrypoint.sh && \
+    echo "source /root/ros2_ws/install/setup.bash" >> ~/.bashrc
 
 ENTRYPOINT ["/sbin/ros_entrypoint.sh"]
 CMD ["bash"]
