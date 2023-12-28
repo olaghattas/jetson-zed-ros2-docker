@@ -114,7 +114,6 @@ WORKDIR /root/ros2_ws/src
 RUN export LD_LIBRARY_PATH="/root/lib/aarch64-linux-gnu/:$LD_LIBRARY_PATH" && \
 ldconfig
 
-
 RUN git clone --recursive https://github.com/olaghattas/zed-ros2-wrapper.git -b jetson
 # Install missing dependencies
 WORKDIR /root/ros2_ws/src
@@ -140,12 +139,14 @@ RUN apt-get update -y || true && rosdep fix-permissions && rosdep update && \
 
 # Install cython
 RUN python3 -m pip install --upgrade cython
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get -y install gdbserver
 
 # Build the dependencies and the ZED ROS2 Wrapper
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/install/setup.bash && \
   colcon build --parallel-workers $(nproc) \
   --event-handlers console_direct+ --base-paths src \
-  --cmake-args ' -DCMAKE_BUILD_TYPE=Release' \
+  --cmake-args ' -DCMAKE_BUILD_TYPE=Debug' \
   ' -DCMAKE_LIBRARY_PATH=/usr/local/cuda/lib64/stubs' \
   ' -DCUDA_CUDART_LIBRARY=/usr/local/cuda/lib64/stubs' \
   ' -DCMAKE_CXX_FLAGS="-Wl,--allow-shlib-undefined"' \
