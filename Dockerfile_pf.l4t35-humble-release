@@ -113,12 +113,18 @@ ENV ROS_DISTRO ${ROS2_DIST}
 # Install the ZED ROS2 Wrapper
 WORKDIR /root/ros2_ws/src
 
-#RUN ln -s /usr/include/opencv4 /usr/local/include/opencv4
-#RUN export LD_LIBRARY_PATH="/root/lib/aarch64-linux-gnu/:$LD_LIBRARY_PATH" && \
-#ldconfig
+RUN wget http://dlib.net/files/dlib-19.17.tar.bz2 && \     
+    tar jxvf dlib-19.17.tar.bz2 && \    
+    cd dlib-19.17 && \ 
+    sed -i 's/forward_algo = forward_best_algo;/\/\/forward_algo = forward_best_algo;/' dlib/cuda/cudnn_dlibapi.cpp && \
+    python3 setup.py install
+
+#RUN pip3 install pysmartthings
+#COPY mediapipe-bin/ .
+#RUN cd mediapipe-bin && pip3 install numpy-1.19.4-cp36-none-manylinux2014_aarch64.whl mediapipe-0.8.5_cuda102-cp36-none-linux_aarch64.whl && \
+#  pip3 install dataclasses
 
 
-RUN git clone --recursive https://github.com/olaghattas/zed-ros2-wrapper.git -b jetson
 # Install missing dependencies
 WORKDIR /root/ros2_ws/src
 RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz -O - | tar -xvz && mv xacro-${XACRO_VERSION} xacro && \
@@ -128,15 +134,20 @@ RUN wget https://github.com/ros/xacro/archive/refs/tags/${XACRO_VERSION}.tar.gz 
   wget https://github.com/ros-geographic-info/geographic_info/archive/refs/tags/${GEOGRAPHIC_INFO_VERSION}.tar.gz -O - | tar -xvz && mv geographic_info-${GEOGRAPHIC_INFO_VERSION} geographic-info && \
   cp -r geographic-info/geographic_msgs/ . && \
   rm -rf geographic-info && \
+  git clone --recursive https://github.com/olaghattas/zed-ros2-wrapper.git -b jetson && \
   git clone https://github.com/ros-drivers/nmea_msgs.git --branch ros2 && \
   git clone https://github.com/ros/angles.git --branch humble-devel && \
   git clone https://github.com/MarzanShuvo/apriltag.git && \
   git clone https://github.com/olaghattas/jetson_zed_setup.git && \
-  git clone https://github.com/olaghattas/human_pose_detection.git && \
   git clone https://github.com/olaghattas/apriltag_ros.git -b foxy-devel && \
   git clone https://github.com/olaghattas/shr_utils.git  && \
-  git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams
+  git clone https://github.com/olaghattas/face_recognition_zed.git && \
+  git clone https://github.com/olaghattas/particle_filter_msgs.git && \
+  git clone https://github.com/olaghattas/particle_filter_mesh.git -b multiple_cams 
 
+WORKDIR /root/ros2_ws/src/face_recognition_zed
+RUN git pull
+RUN pip install face_recognition
 WORKDIR /root/ros2_ws
 RUN apt-get update -y || true && rosdep fix-permissions && rosdep update && \
   rosdep install --from-paths src --ignore-src --skip-keys "libopencv-dev libopencv-contrib-dev libopencv-imgproc-dev python-opencv python3-opencv"  -r -y && \
